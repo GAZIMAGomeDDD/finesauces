@@ -5,7 +5,11 @@ from cart.views import get_cart, cart_clear
 from decimal import Decimal
 from django.conf import settings
 from .tasks import order_created
+from django.contrib.admin.views.decorators import staff_member_required
+from django.http import HttpResponse
+from django.template.loader import render_to_string
 import stripe
+import weasyprint
 
 stripe.api_key = settings.STRIPE_TEST_SECRET_KEY
 
@@ -74,3 +78,17 @@ def order_create(request):
             'stripe_pk': settings.STRIPE_TEST_PUBLISHABLE_KEY            
         }
     )
+
+
+@staff_member_required
+def invoice_pdf(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'filename=order_{order.id}.pdf'
+
+    html = render_to_string('pdf.html', {'order': order})
+    stylesheets=[weasyprint.CSS(str(settings.BASE_DIR) + '/listings/static/css/pdf.css')]
+    weasyprint.HTML(string=html).write_pdf(response, stylesheets=stylesheets)
+
+    return response
