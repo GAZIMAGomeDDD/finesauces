@@ -117,9 +117,10 @@ ${{ cart_total_price|floatformat:2 }}
     class="btn btn-warning shadow-custom col">
     Back to shop
     </a>
-    <a href="" class="btn btn-danger shadow-custom col">
-    Checkout
-    </a>
+    <a href="{% url 'orders:order_create' %}"
+class="btn btn-danger shadow-custom col">
+Checkout
+</a>
     </div>
     </div>
     {% else %}
