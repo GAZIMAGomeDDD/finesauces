@@ -5,9 +5,9 @@ from cart.views import get_cart, cart_clear
 from decimal import Decimal
 from django.conf import settings
 from .tasks import order_created
-from django.contrib.admin.views.decorators import staff_member_required
 from django.http import HttpResponse
 from django.template.loader import render_to_string
+from finesauces_project.decorators import user_created_order
 import stripe
 import weasyprint
 
@@ -30,6 +30,10 @@ def order_create(request):
             
             order = order_form.save(commit=False)
             order.transport_cost = Decimal(transport_cost)
+
+            if request.user.is_authenticated:
+                order.user = request.user
+                
             order.save()
             product_ids = cart.keys()
             products = Product.objects.filter(id__in=product_ids)
@@ -67,6 +71,19 @@ def order_create(request):
         
     else:
         order_form = OrderCreateForm()
+        
+        if request.user.is_authenticated:
+            initial_data = {
+                'first_name': request.user.first_name,
+                'last_name': request.user.last_name,
+                'email': request.user.email,
+                'telephone': request.user.profile.phone_number,
+                'address': request.user.profile.address,
+                'postal_code': request.user.profile.postal_code,
+                'city': request.user.profile.city,
+                'country': request.user.profile.country,
+            }
+            order_form = OrderCreateForm(initial=initial_data)
 
     return render(
         request,
@@ -80,7 +97,6 @@ def order_create(request):
     )
 
 
-@staff_member_required
 def invoice_pdf(request, order_id):
     order = get_object_or_404(Order, id=order_id)
 
@@ -92,3 +108,14 @@ def invoice_pdf(request, order_id):
     weasyprint.HTML(string=html).write_pdf(response, stylesheets=stylesheets)
 
     return response
+
+
+@user_created_order
+def order_detail(request, order_id):
+    order = Order.objects.get(pk=order_id)
+
+    return render(
+        request,
+        'order_detail.html',
+        {'order': order}
+    )

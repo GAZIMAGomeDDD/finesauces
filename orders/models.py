@@ -1,5 +1,7 @@
 from django.db import models
 from listings.models import Product
+from django.conf import settings
+from django.urls import reverse
 
 
 ORDER_STATUS = [
@@ -31,6 +33,13 @@ class Order(models.Model):
     note = models.TextField(blank=True)
     transport = models.CharField(max_length=20, choices=TRANSPORT_CHOICES)
     transport_cost = models.DecimalField(max_digits=10, decimal_places=2)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='orders',
+        blank=True,
+        null=True
+    )
 
     class Meta:
         ordering = ('-created',)
@@ -42,6 +51,12 @@ class Order(models.Model):
         total_cost = sum(item.get_cost() for item in self.items.all())
         total_cost += self.transport_cost
         return total_cost
+
+    def get_absolute_url(self):
+        return reverse(
+            'orders:order_detail',
+            args=[self.id]
+        )
     
 
 class OrderItem(models.Model):
